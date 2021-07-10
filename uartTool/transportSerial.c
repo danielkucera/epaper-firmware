@@ -6,7 +6,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 
 
@@ -111,6 +112,32 @@ static int32_t tWrite(struct Transport *xport, const void* data, uint32_t len)
 	return nWrote;
 }
 
+static int32_t tReset(struct Transport *xport)
+{
+	struct state *state = (struct state*)xport->transportData;
+	int port = state->port;
+	int flags;
+
+	#ifdef LOG_SERIAL
+		fprintf(stderr, "DTR pull\n");
+	#endif
+
+	ioctl(port, TIOCMGET, &flags);
+
+	flags |= TIOCM_DTR;
+	ioctl(port, TIOCMSET, &flags);
+
+	sleep(1);
+
+	flags &= ~TIOCM_DTR;
+	ioctl(port, TIOCMSET, &flags);
+
+	/* Get the 'AFTER' line bits */
+	ioctl(port, TIOCMGET, &flags);
+
+	return 0;
+}
+
 bool transportSerialInit(struct Transport *xport, const char* path)
 {
 	struct state *state;
@@ -151,6 +178,7 @@ bool transportSerialInit(struct Transport *xport, const char* path)
 	xport->close = &tClose;
 	xport->read = &tRead;
 	xport->write = &tWrite;
+	xport->reset = &tReset;
 	xport->transportData = state;
 	
 	return true;

@@ -13,6 +13,7 @@ struct Transport;
 typedef void (*TransportIfCloseF)(struct Transport *xport);
 typedef int32_t (*TransportReadF)(struct Transport *xport, void* data, uint32_t maxLen);
 typedef int32_t (*TransportWriteF)(struct Transport *xport, const void* data, uint32_t len);
+typedef int32_t (*TransportResetF)(struct Transport *xport);
 
 
 struct Transport {
@@ -20,6 +21,7 @@ struct Transport {
 	TransportIfCloseF close;
 	TransportReadF read;
 	TransportWriteF write;
+	TransportResetF reset;
 	void *transportData;
 };
 

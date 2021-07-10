@@ -135,6 +135,7 @@ static void waitForDevice(struct Transport *xport)
 	unsigned i;
 	
 	fprintf(stderr, "waiting for boot\n");
+	xport->reset(xport);
 	while (xport->read(xport, &byte, 1) != 1 || (byte != 0x3a && byte != 0x23));
 	
 	if (byte == 0x3a) {
