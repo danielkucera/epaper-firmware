@@ -22,7 +22,7 @@ extern const uint32_t mCommsPresharedKey[];
 void commsInit(const uint8_t *myMac, uint32_t ivStart);		//myMac pointer must remain valid, it is not copied
 
 bool commsTx(uint8_t radioIdx, const uint8_t *toMac, const void *packet, uint32_t payloadLen, bool useSharedKey, bool withAck, bool includeSourceMac);
-int32_t commsRx(uint8_t *radioIdxP, void *data, uint8_t *fromMac, int8_t *rssiP, uint8_t *lqiP, bool *wasBcastP);	//returns length or COMMS_RX_ERR_*
+int32_t commsRx(uint32_t radiosMask, uint8_t *radioIdxP, void *data, uint8_t *fromMac, int8_t *rssiP, uint8_t *lqiP, bool *wasBcastP);	//returns length or COMMS_RX_ERR_*
 
 
 //externally provided

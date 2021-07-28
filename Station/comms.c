@@ -1,4 +1,4 @@
-#include "../patchedfw/proto.h"
+#include "../solum_BW_4.2_fw/proto.h"
 #include "timebase.h"
 #include <stdint.h>
 #include <string.h>

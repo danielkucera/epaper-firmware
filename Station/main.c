@@ -1,5 +1,5 @@
 #include "nrf52840_bitfields.h"
-#include "../patchedfw/proto.h"
+#include "../solum_BW_4.2_fw/proto.h"
 #include "timebase.h"
 #include "imgStore.h"
 #include "nrf52840.h"
