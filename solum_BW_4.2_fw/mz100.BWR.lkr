@@ -1,0 +1,73 @@
+
+MEMORY
+{
+	rom		: ORIGIN = 0x0010C648, LENGTH = 0x00002990
+	rom2	: ORIGIN = 0x0010EFD8, LENGTH = 0
+	vermark	: ORIGIN = 0x0010EFD8, LENGTH = 0x00000008
+	ram		: ORIGIN = 0x2012570C, LENGTH = 0x00001000
+	trash1	: ORIGIN = 0x30000000, LENGTH = 0x00010000
+	trash2	: ORIGIN = 0x31000000, LENGTH = 0x00010000
+}
+
+INCLUDE mz100.common.lkr
+
+/* value exports */
+versionEePos					= ADDR ( .ver ) - 0x00100000 + 0x20;
+
+/* function exports */
+
+uartTx							= 0x00101C40;
+
+romPrintfDisabled				= 0x2010855C;	/* place b.w to printf here to allow stock rom to print */
+
+gHeapMemory						= 0x20110D00;
+gHeapMemoryEnd					= 0x20122F38;
+
+sleepForMsec					= 0x001072B6;
+
+qspiWrite						= 0x00101040;
+qspiEraseSector					= 0x00100D1A;
+qspiEraseSectorCmd				= 0x20100D42;
+qspiEraseSectorShift			= 0x20100D2A;
+qspiEraseSectorBoundsCheck		= 0x20100D22;
+qspiEraseSectorTimeout			= 0x20101034;
+qspiRead						= 0x00100DDE;
+qspiChipSleepWake				= 0x00000594;
+
+einkDrawAndPowerOff				= 0x0010B0CA;
+einkInitUsingFw					= 0x0010AD84;
+einkInterfaceInit				= 0x0010AB7C;
+einkLlSendCommand				= 0x0010AC46;
+einkLlSendData					= 0x0010B13A;
+
+fwBatteryRawMeasure				= 0x001003E8;
+fwBatteryMeasurePatch			= 0x2010049C;
+
+radioTx							= 0x00102A42;
+radioSetChannel					= 0x00106A32;
+radioSetFilterShortAddr			= 0x001066AA;
+radioSetFilterLongAddr			= 0x00106690;
+radioSetFilterPan				= 0x00106686;
+radioRxGetNextRxedPacket		= 0x001074F2;
+radioRxReleaseBuffer			= 0x0010749C;
+radioLoadCalibData				= 0x00103BC6;
+radioRxFilterEnable				= 0x001027F2;
+radioSetTxPower					= 0x00101DD4;
+radioEarlyInit					= 0x00106740;
+radioRxQueueInit				= 0x001074AC;
+
+gpioGet							= 0x001010E8;
+gpioSet							= 0x001010D4;
+
+wdtPet							= 0x00101BE0;
+
+VECTORS							= 0x20100000;
+
+memcpy							= 0x0010B1D8;
+memset							= 0x0010B20E;
+memcmp							= 0x0010B222;
+bzero							= 0x0010B20A;
+
+
+
+

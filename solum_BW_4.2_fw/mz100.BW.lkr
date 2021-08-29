@@ -1,0 +1,78 @@
+
+MEMORY
+{
+	rom		: ORIGIN = 0x0010D298, LENGTH = 0x00001d40
+	rom2	: ORIGIN = 0x00103070, LENGTH = 0x000012d8
+	vermark	: ORIGIN = 0x0010EFD8, LENGTH = 0x00000008
+	ram		: ORIGIN = 0x2012570C, LENGTH = 0x00001000
+	trash1	: ORIGIN = 0x30000000, LENGTH = 0x00010000
+	trash2	: ORIGIN = 0x31000000, LENGTH = 0x00010000
+}
+
+INCLUDE mz100.common.lkr
+
+/* value exports */
+versionEePos					= ADDR ( .ver ) - 0x00100000 + 0x20;
+
+/* function exports */
+uartTx							= 0x00101C5C;
+
+pr								= 0x001025B0;
+vsnprintf						= 0x00102D30;
+
+gHeapMemory						= 0x20110900;
+gHeapMemoryEnd					= 0x2012570C;
+
+sleepForMsec					= 0x00109ADC;
+
+qspiWrite						= 0x00100FF6;
+qspiEraseSector					= 0x00100EC0;
+qspiEraseSectorCmd				= 0x20100ee8;
+qspiEraseSectorShift			= 0x20100ed0;
+qspiEraseSectorBoundsCheck		= 0x20100ec8;
+qspiEraseSectorTimeout			= 0x20101070;
+qspiRead						= 0x00100D4E;
+qspiChipSleepWake				= 0x00000594;
+
+gEinkLuts						= 0x2010F148;
+einkPowerOff					= 0x00104388;
+einkInterfaceInit				= 0x00104408;
+einkLlSendCommand				= 0x00104348;
+einkLlSendData					= 0x001044DE;
+einkLlRawSpiByte				= 0x001019FE;
+einkLlTempToCalibRange			= 0x00104626;
+einkLlSendTempCalib				= 0x001045DA;
+
+fwBatteryRawMeasure				= 0x00100458;
+fwBatteryMeasurePatch			= 0x2010050C;
+adcConfigTempMeas				= 0x0010058C;
+adcDoMeasure					= 0x001005C4;
+adcOff							= 0x0010036C;
+
+radioTx							= 0x0010A512;
+radioSetChannel					= 0x00106ECE;
+radioSetFilterShortAddr			= 0x0010A168;
+radioSetFilterLongAddr			= 0x0010A12A;
+radioSetFilterPan				= 0x0010A0F8;
+radioRxGetNextRxedPacket		= 0x0010717E;
+radioRxReleaseBuffer			= 0x001070B0;
+radioLoadCalibData				= 0x00105FA3;
+radioRxFilterEnable				= 0x0010A208;
+radioSetTxPower					= 0x00101DF4;
+radioEarlyInit					= 0x00106B64;
+radioRxQueueInit				= 0x001070C0;
+
+gpioGet							= 0x001010A8;
+gpioSet							= 0x00101094;
+
+wdtPet							= 0x00101BFC;
+
+VECTORS							= 0x20100000;
+
+memcpy							= 0x0010BBAC;
+memset							= 0x0010BBE2;
+memcmp							= 0x0010BBF4;
+bzero							= 0x0010BBDE;
+
+
+

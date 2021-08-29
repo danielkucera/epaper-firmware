@@ -1,0 +1,21 @@
+
+
+SECTIONS
+{
+	.text2 : { *(.text2) *(.text2.*) ; }  > rom2
+	.text : { *(.vectors) *(.text) *(.text.*) ; }  > rom
+	.rodata : { *(.rodata) *(.rodata.*) ;  . = ALIGN(4); __data_data = ABSOLUTE(.) ; }  > rom
+	
+	.ver : { *(.ver) *(.ver.*) ; } > vermark
+	
+	.data : AT ( ADDR ( .rodata ) + SIZEOF ( .rodata ) ) { __data_start = ADDR ( .data ) + . ;  . = ALIGN(4); *(.data) ; *(.data.*) ;  . = ALIGN(4); __data_end = ADDR ( .data ) + . ; } > ram
+	.bss  :  {  . = ALIGN(4); __bss_start  = ABSOLUTE(.) ; *(.bss) *(.bss.*) *(COMMON) ; . = ALIGN(4); __bss_end  = ABSOLUTE(.) ; } > ram
+	
+	.trash1  :  { *(.ARM.exidx) *(.ARM.exidx.*) } > trash1
+	.trash2  :  { *(.init) *(.init.*) *(.fini) *(.fini.*) } > trash2
+}
+
+
+ENTRY(__entry)
+
+
