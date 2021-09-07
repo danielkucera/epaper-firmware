@@ -57,29 +57,17 @@ uint32_t measureBattery(void)
 	uint32_t oldWord, ret;
 	
 	//patch battery measurement to return raw ADC value
-	oldWord = *(volatile uint32_t*)0x201004f0;
-	*(volatile uint32_t*)0x201004F0 = 0x81f0e8bd;
+	oldWord = fwBatteryMeasurePatch;
+	fwBatteryMeasurePatch = 0x81f0e8bd;	//patch it to return centivolts
 	
 	ret = fwBatteryRawMeasure();
 	
-	*(volatile uint32_t*)0x201004F0 = oldWord;
+	fwBatteryMeasurePatch = oldWord;
 	
 	//this is broken on our development board but works on real tags!
 	//result is 32768 * volts / 3.6
 	
-	return ret * 3600 / 32768;
-}
-
-int snprintf(char *s, size_t n, const char *format, ... )
-{
-	va_list vl;
-	int ret;
-	
-	va_start(vl, format);
-	ret = vsnprintf(s, n, format, vl);
-	va_end(vl);
-	
-	return ret;
+	return ret * 10;
 }
 
 int sprintf(char *s, const char *format, ... )
@@ -101,21 +89,21 @@ static bool qspiEraseWithCmdAndDirectAddr(uint32_t at, uint_fast8_t cmd, uint32_
 	bool ret;
 	
 	//patch QSPI command
-	*(volatile uint8_t*)0x20100ee8 = cmd;
+	qspiEraseSectorCmd = cmd;
 	
 	//patch left shift
-	*(volatile uint16_t*)0x20100ed0 = 0xbf00;
+	qspiEraseSectorShift = 0xbf00;
 	
 	//patch overflow check
-	*(volatile uint16_t*)0x20100ec8 = 0xbf00;
+	qspiEraseSectorBoundsCheck = 0xbf00;
 	
 	//patch timeout (save as it is used by writing func too
-	oldTimeout = *(volatile uint32_t*)0x20101070;
-	*(volatile uint32_t*)0x20101070 = timeout;
+	oldTimeout = qspiEraseSectorTimeout;
+	qspiEraseSectorTimeout = timeout;
 	
 	ret = qspiEraseSector(at);
 	
-	*(volatile uint32_t*)0x20101070 = oldTimeout;
+	qspiEraseSectorTimeout = oldTimeout;
 	
 	return ret;
 }

@@ -240,7 +240,7 @@ static void uiPrvFullscreenMsg(const char *str, const char *line2, const char *l
 	
 	#define LINE1_MAGN	2
 	
-	static const uint8_t colorA[] = {(1 << DISPLAY_BPP) - 1 /* black */, (DISPLAY_BPP == 1) ? 1 : (1 << DISPLAY_BPP) - 2 /* not blank, but less dark */, (1 << DISPLAY_BPP) - 1 /* black */};
+	static const uint8_t colorA[] = {UI_MSG_COLR_LINE1, UI_MSG_COLR_LINE2, UI_MSG_COLR_LINE3};
 	static const uint16_t rowA[] = {(DISPLAY_HEIGHT - CHAR_HEIGHT * LINE1_MAGN) / 2, (DISPLAY_HEIGHT - CHAR_HEIGHT * LINE1_MAGN) / 2 + CHAR_HEIGHT * LINE1_MAGN + 2, DISPLAY_HEIGHT - CHAR_HEIGHT};
 	const char *strA[] = {str ? str : "", line2 ? line2 : "", line3 ? line3 : ""};
 	static const bool centerA[] = {true, true, false};
@@ -249,7 +249,7 @@ static void uiPrvFullscreenMsg(const char *str, const char *line2, const char *l
 	
 	pr("MESSAGE: '%s', '%s', '%s'\r\n", strA[0], strA[1], strA[2]);
 	
-	bzero(displayGetFbPtr(), canv.rowBytes * canv.h);
+	memset(displayGetFbPtr(), UI_MSG_COLR_BACK | (UI_MSG_COLR_BACK << DISPLAY_BPP) | (UI_MSG_COLR_BACK << (2 * DISPLAY_BPP)) | (UI_MSG_COLR_BACK << (3 * DISPLAY_BPP)), canv.rowBytes * canv.h);
 	
 	for (i = 0; i < 3; i++) {
 		
@@ -265,7 +265,7 @@ static void uiPrvFullscreenMsg(const char *str, const char *line2, const char *l
 		
 		while ((ch = *str++) != 0) {
 			
-			charsDrawChar(&canv, ch, c, rowA[i], colorA[i], 0, magn);
+			charsDrawChar(&canv, ch, c, rowA[i], colorA[i], UI_MSG_COLR_BACK, magn);
 			c += CHAR_WIDTH * magn;
 		}
 	}
@@ -324,7 +324,21 @@ static void uiPrvDrawBitmap(const void *data, uint32_t size)
 		//our colors are opposite of brightness, so we need to invert this too
 		intensity ^= 0x00ffffff;
 		
-		clutOurs[i] = intensity >> (24 - DISPLAY_BPP);
+		#if defined(TAG_BWR)
+			
+			if (clut[i].r == 255 && !clut[i].g && !clut[i].b)
+				clutOurs[i] = 3;
+			else
+				clutOurs[i] = (intensity >> 23) ? 3 : 2;
+			
+		#elif defined (TAG_BW)
+			clutOurs[i] = intensity >> (24 - DISPLAY_BPP);
+		#else
+			#error not sure how to map clut
+		#endif
+		
+		
+		pr("mapped (%d,%d,%d) -> %d\n", clut[i].r, clut[i].g, clut[i].b, clutOurs[i]);
 	}
 	
 	src = ((char*)data) + bmp->dataOfst;
@@ -866,16 +880,10 @@ static uint32_t uiNotPaired(struct Settings *settings, struct CommsInfo *ci)
 	packet.ti.screenMmHeight = 63;
 	packet.ti.compressionsSupported = PROTO_COMPR_TYPE_LZ;
 	packet.ti.maxWaitMsec = COMMS_MAX_RADIO_WAIT_MSEC;
-	
-	switch (DISPLAY_BPP) {
-		case 1:		packet.ti.screenType = TagScreenEink_BW_1bpp;	break;
-		case 2:		packet.ti.screenType = TagScreenEink_BW_2bpp;	break;
-		default:	packet.ti.screenType = TagScreenTypeOther;		break;
-	}
+	packet.ti.screenType = DISPLAY_TYPE;
 	
 	sprintf(macStr, "("MACFMT")", MACCVT(mSelfMac));
 	uiPrvFullscreenMsg("READY TO ASSOCIATE", macStr, fwVerString());
-	
 	
 	radioInitialize();
 	radioSetTxPower(0);
@@ -887,10 +895,12 @@ static uint32_t uiNotPaired(struct Settings *settings, struct CommsInfo *ci)
 		
 		prvProgressBar(ch - 11, 26 - 11 + 1, &settings->prevDlProgress);
 		
+			
 		waitEnd = timerGet() + TIMER_TICKS_PER_SEC / 2;	//try for 1/2 second per channel
 		while (timerGet() < waitEnd) {
 			
 			commsTx(ci, true, &packet, sizeof(packet));
+			
 			nowStart = timerGet();
 			while (timerGet() - nowStart < TIMER_TICKS_PER_MSEC * 150 /* wait 150 ms before retransmitting */) {
 				
@@ -923,9 +933,8 @@ static uint32_t uiNotPaired(struct Settings *settings, struct CommsInfo *ci)
 					memcpy(settings->encrKey, ai->newKey, sizeof(settings->encrKey));
 					settings->isPaired = 1;
 					
-					radioShutdown();
-					
 					pr("Associated to master "MACFMT"\r\n", MACCVT(settings->masterMac));
+					radioShutdown();
 					
 					settings->prevDlProgress = 0xffff;
 					uiPrvFullscreenMsg("\x01\x02", NULL, fwVerString());	//signal icon
@@ -969,7 +978,13 @@ static void prvGetSelfMac(void)
 	if ((((uint32_t*)mSelfMac)[0] | ((uint32_t*)mSelfMac)[1]) == 0 || (((uint32_t*)mSelfMac)[0] & ((uint32_t*)mSelfMac)[1]) == 0xffffffff) {	//fastest way to check for all ones or all zeroes
 		
 		pr("mac unknown\r\n");
-		powerDownAndSleep(0);
+		
+		((uint32_t*)mSelfMac)[0] = 0x12345678;
+		((uint32_t*)mSelfMac)[1] = 0xabcdef01;
+		
+		pr("XXX\r\n");
+		
+		//powerDownAndSleep(0);
 	}
 }
 
@@ -1013,6 +1028,7 @@ void main(void)
 	struct CommsInfo ci;
 	
 	wdtReconfig();
+	
 	showVersionAndVerifyMatch();
 	hwInit();
 	heapInit();
@@ -1022,11 +1038,12 @@ void main(void)
 	settingsRead(&settings);
 	wdtPet();
 	
+	//might be worth reading current OTP for info :)
 	
 	prvGetSelfMac();
-	
+		
 	setPowerState(false);
-	
+		
 	ci.myMac = mSelfMac;
 	ci.masterMac = settings.masterMac;
 	ci.encrKey = settings.encrKey;
@@ -1035,7 +1052,6 @@ void main(void)
 	wdtPet();
 
 	if (settings.isPaired) {
-		
 		
 		if (prvApplyUpdateIfNeeded()) {
 			

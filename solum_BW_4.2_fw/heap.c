@@ -33,7 +33,7 @@ static struct HeapNode* heapPrvGetNext(struct Heap* h, struct HeapNode* node)
 
 void heapInit(void)
 {
-	uint32_t size = MZ_AVAIL_HEAP_MEM;
+	uint32_t size = gHeapMemoryEnd - gHeapMemory;
 	struct Heap *h = heapPrvGet();
 	struct HeapNode *node;
 	

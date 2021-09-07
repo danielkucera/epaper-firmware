@@ -5,7 +5,7 @@ LTO		= -flto
 COMMON	= -Os -mthumb -march=armv7-m  -fomit-frame-pointer -I. $(LTO) -munaligned-access
 CCFLAGS	= $(COMMON) -ffunction-sections -fdata-sections
 LDFLAGS	= $(COMMON) -Wl,--gc-sections -Wl,-T $(LKR)
-BUILD	?= BW
+BUILD	?= BWR
 
 APP			= PatchedFW
 CHAR_IMGS	= chars.img
@@ -13,7 +13,7 @@ CHAR_IMGS	= chars.img
 
 COMMONOBJS += crt.o main.o ccm.o timer.o chars.o settings.o util.o comms.o heap.o
 
-all: QSPI.BW.bin
+all: QSPI.$(BUILD).bin
 
 
 define one_build

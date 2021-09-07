@@ -158,6 +158,7 @@ int32_t __attribute__((noinline)) commsRx(struct CommsInfo *info, void *data, ui
 	minNeedLen += sizeof(uint32_t);					//nonce counter
 	minNeedLen += 2 * sizeof(uint8_t);				//RSSI/LQI
 	
+	
 	rb = radioRxGetNextRxedPacket();
 	if (!rb)
 		return COMMS_RX_ERR_NO_PACKETS;
@@ -179,6 +180,7 @@ int32_t __attribute__((noinline)) commsRx(struct CommsInfo *info, void *data, ui
 	
 	mfm = (struct MacFrameFromMaster*)buf;
 	mfn = (struct MacFrameNormal*)buf;
+	
 	radioRxReleaseBuffer(rb);
 	
 	//sort out header len, copy mac into nonce

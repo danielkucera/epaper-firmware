@@ -6,13 +6,16 @@
 
 
 
-//layout-related shit
-#define TEXT2		__attribute__((noinline, section(".text2"))) 
-
+#if defined(TAG_BW)
+	//layout-related shit
+	#define TEXT2		__attribute__((noinline, section(".text2")))
+	#error wtf
+#elif defined(TAG_BWR)
+	#define TEXT2
+#endif
 
 //MEMORY
-	#define MZ_AVAIL_HEAP_MEM		(0x15F00)
-	extern char gHeapMemory[MZ_AVAIL_HEAP_MEM];
+	extern char gHeapMemory[], gHeapMemoryEnd[];
 
 //QSPI
 	//assumes area is already erased. stock does not use "useQuadProgram"
@@ -20,6 +23,11 @@
 
 	//note, param is NOT address. Direct use not advised, use qspiEraseRange()
 	bool qspiEraseSector(uint32_t sectorNum);												//ROM:00100EC0
+	//patch locations for it
+	extern volatile uint8_t qspiEraseSectorCmd;
+	extern volatile uint16_t qspiEraseSectorShift;
+	extern volatile uint16_t qspiEraseSectorBoundsCheck;
+	extern volatile uint32_t qspiEraseSectorTimeout;
 
 	//mode does not matter, and 0 should be used. returns num bytes read
 	uint32_t qspiRead(uint8_t mode, uint32_t addr, void* dst, uint32_t nBytes);				//ROM:00100D4E
@@ -87,8 +95,12 @@
 //SCREEN
 	extern const void *gEinkLuts[];															//RAM:2010F148
 	
-	//fow lower power yet!
+	//for lower power yet!
 	void einkPowerOff(void);																//ROM:00104388
+	
+	//bwr only
+	void einkDrawAndPowerOff(void);
+	void einkInitUsingFw(void);
 	
 	//interface (gpios) init
 	void einkInterfaceInit(void);															//ROM:00104408
@@ -122,8 +134,10 @@
 	//2.85+	-> 223
 	//2.76+ -> 239
 	//less -> 255
-	//we sometimes instead patch this to return raw ADC value: (84000 / voltage)
+	//we sometimes instead patch this to return raw voltage value
 	uint16_t fwBatteryRawMeasure(void);														//ROM:00100458
+	extern volatile uint32_t fwBatteryMeasurePatch;
+	
 	
 	//configure the ADC to measure temperature
 	void adcConfigTempMeas(void);															//ROM:0010058C
@@ -144,6 +158,7 @@
 	//printf to uart
 	void pr(const char* fmt, ...);															//ROM:001025B0
 	void wdtPet(void);																		//ROM:00101BFC
+	void uartTx(uint32_t unitNo, const void *data, uint32_t nBytes);						//ROM:00101C5C
 
 //GENERAL
 	extern void (* volatile VECTORS[])(void);												//RAM:20100000 
