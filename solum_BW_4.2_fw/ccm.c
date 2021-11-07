@@ -11,9 +11,27 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 	uint32_t *outD = (uint32_t*)dst;
 	uint_fast8_t i;
 	bool success;
-	
-	pr("AES delay, causew wtf???\r\n");
-	
+
+#ifdef AES_DEBUG
+	pr("\naes dec: %d src: %x dst: %x \n", dec, &src, &dst);
+	pr("authSrcLen: %d encSrcLen: %d \n", authSrcLen, encSrcLen);
+	pr("src:");
+	for (int i=0; i<authSrcLen+encSrcLen; i++){
+		pr("%02X", ((unsigned char *)src)[i]);
+	}
+	pr("\n");
+	pr("key:");
+	for (int i=0; i<16; i++){
+		pr("%02X", ((unsigned char *)key)[i]);
+	}
+	pr("\n");
+	pr("nonce:");
+	for (int i=0; i<AES_CCM_NONCE_SIZE; i++){
+		pr("%02X", ((unsigned char *)nonce)[i]);
+	}
+	pr("\n");
+#endif
+
 	if (dec) {
 		nBytesIn = nBytesNoMic + AES_CCM_MIC_SIZE;
 		nBytesOut = nBytesNoMic;
@@ -23,18 +41,20 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 		nBytesOut = nBytesNoMic + AES_CCM_MIC_SIZE;
 	}
 	
-	while (!(AES->STATUS & 1));
+	while (!(AES->STATUS & 1)); // DONE
 	
 	do{
-		AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02;
-	} while (!(AES->STATUS & 2));
+		//AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
+		AES->CTRL1 |= 0x02; // set LOCK0
+	} while (!(AES->STATUS & 2)); // RSVD0
 	
+	AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
 	
-	AES->IMR = 0x07;
-	AES->CTRL2 |= 1;
+	AES->IMR = 0x07; // disable all interrupt
+	AES->CTRL2 |= 1; // AES_RESET
 	(void)AES->CTRL2;
-	AES->CTRL2 &=~ 1;
-	AES->CTRL1 = 0x0005501e + (dec ? 0x8000 : 0);
+	AES->CTRL2 &=~ 1; // AES_RESET
+	AES->CTRL1 = 0x0005501e + (dec ? 0x8000 : 0); // MODE=CCM; OUT_MIC=1; MIC_LEN=4b; OUT_MSG=1; IF_CLR=OF_CLR=1; LOCK0=1 
 	
 	
 	for(i = 0; i < 4; i++)
@@ -48,34 +68,37 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 	AES->IV[3] = ((uint8_t*)nonce)[12] + 0x200;	//2 byte lengths
 	
 	
-	AES->CTRL1 |= 1;
+	AES->CTRL1 |= 1; // START
 	
 	uint32_t nretries;
 	
 	while (nBytesIn || nBytesOut) {
 		
-		if (!(AES->STATUS & 0x10) && nBytesIn) {
+		if (!(AES->STATUS & 0x10) && nBytesIn) { // !IF_FULL & bytes left to copy
 			
-			if (nBytesIn >= 4) {
-				AES->STR_IN = *inD++;
-				nBytesIn -= 4;
+			if (nBytesIn >= 4) { // 4 or more bytes left
+				//pr("i %0X \n", (*inD));
+				AES->STR_IN = *inD++; // copy 1 word
+				nBytesIn -= 4; // 
 			}
 			else {
-				tempB = 0;
-				memcpy(&tempB, inD, nBytesIn);
+				tempB = 0; // use temp var
+				memcpy(&tempB, inD, nBytesIn); //copy bytes left
 				AES->STR_IN = tempB;
-				nBytesIn = 0;
+				nBytesIn = 0; // copy input complete 
 			}
 		}
 		
-		if ((AES->STATUS & 0x40) && nBytesOut) {
+		if ((AES->STATUS & 0x40) && nBytesOut) { // OF_RDY & bytes left to read
 			
+			tempB = AES->STR_OUT;
+			//pr("o %0X \n", tempB);
+
 			if (nBytesOut >= 4) {
-				*outD++ = AES->STR_OUT;
-				nBytesOut -= 4;
+				*outD++ = tempB; // copy output
+				nBytesOut -= 4; // decrease bytes left
 			}
 			else {
-				tempB = AES->STR_OUT;
 				memcpy(outD, &tempB, nBytesOut);
 				nBytesOut = 0;
 			}
@@ -88,10 +111,17 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 		}
 	}
 	
+#ifdef AES_DEBUG
+	pr("\naes res: %d :\n", dec);
+	for (int i=0; i<encSrcLen+authSrcLen; i++){
+		pr("%02X", ((unsigned char *)dst)[i]);
+	}
+	pr("\n");
+#endif
+
+	success = !((AES->STATUS >> 11) & 7); // STATUS 0=no error
 	
-	success = !((AES->STATUS >> 11) & 7);
-	
-	AES->CTRL1 = 0;
+	AES->CTRL1 = 0; //
 	
 	return success;
 }
