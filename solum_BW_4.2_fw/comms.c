@@ -71,8 +71,14 @@ int8_t commsGetLastPacketRSSI(void)
 
 static inline void __attribute__((always_inline)) macCopy(uint8_t *restrict dst, const uint8_t *restrict src)
 {
-	((uint32_t*)dst)[0] = ((const uint32_t*)src)[0];
-	((uint32_t*)dst)[1] = ((const uint32_t*)src)[1];
+	dst[0] = src[0];
+	dst[1] = src[1];
+	dst[2] = src[2];
+	dst[3] = src[3];
+	dst[4] = src[4];
+	dst[5] = src[5];
+	dst[6] = src[6];
+	dst[7] = src[7];
 }
 
 static inline bool __attribute__((always_inline)) macIsEq(const uint8_t *restrict dst, const uint8_t *restrict src)
