@@ -9,7 +9,7 @@
 #if defined(TAG_BW)
 	//layout-related shit
 	#define TEXT2		__attribute__((noinline, section(".text2")))
-	#error wtf
+	//#error wtf
 #elif defined(TAG_BWR)
 	#define TEXT2
 #endif
