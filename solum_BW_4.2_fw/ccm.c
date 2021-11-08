@@ -42,6 +42,9 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 	}
 	
 	while (!(AES->STATUS & 1)); // DONE
+
+	AES->CTRL1 &=~ 128; // reset HW prio
+	AES->CTRL1 |= 64; // set MCU prio
 	
 	do{
 		//AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
