@@ -852,7 +852,7 @@ static uint32_t uiPaired(struct Settings *settings, struct CommsInfo *ci)
 	if ((pi.osUpdateVer & VERSION_SIGNIFICANT_MASK) > (SW_VER_CURRENT & VERSION_SIGNIFICANT_MASK))
 		return prvDriveUpdateDownload(settings, ci, pi.osUpdateVer, pi.osUpdateSize);
 	
-	if (pi.imgUpdateVer > eci.latestCompleteImgVer)
+	if (pi.imgUpdateVer != eci.latestCompleteImgVer)
 		return prvDriveImageDownload(settings, ci, &eci, pi.imgUpdateVer, pi.imgUpdateSize);
 	
 	//nothing? guess we'll check again later
