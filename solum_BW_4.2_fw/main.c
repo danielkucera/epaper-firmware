@@ -329,7 +329,7 @@ static void uiPrvDrawBitmap(const void *data, uint32_t size)
 			if (clut[i].r == 255 && !clut[i].g && !clut[i].b)
 				clutOurs[i] = 3;
 			else
-				clutOurs[i] = (intensity >> 23) ? 3 : 2;
+				clutOurs[i] = (intensity >> 23) ? 1 : 2;
 			
 		#elif defined (TAG_BW)
 			clutOurs[i] = intensity >> (24 - DISPLAY_BPP);
