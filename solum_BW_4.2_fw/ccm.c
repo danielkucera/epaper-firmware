@@ -41,35 +41,35 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 		nBytesOut = nBytesNoMic + AES_CCM_MIC_SIZE;
 	}
 	
-	while (!(AES->STATUS & 1)); // DONE
-
 	AES->CTRL1 &=~ 128; // reset HW prio
 	AES->CTRL1 |= 64; // set MCU prio
 	
+	while (!(AES->STATUS & 1)); // DONE
+
 	do{
 		//AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
 		AES->CTRL1 |= 0x02; // set LOCK0
 	} while (!(AES->STATUS & 2)); // RSVD0
 	
+	AES->CTRL2 |= 1; // AES_RESET
+	for(uint32_t localCnt = 0; localCnt < 0x20; localCnt++); //wait
+	AES->CTRL2 &=~ 1; // AES_RESET
+
 	AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
 	
 	AES->IMR = 0x07; // disable all interrupt
-	AES->CTRL2 |= 1; // AES_RESET
-	(void)AES->CTRL2;
-	AES->CTRL2 &=~ 1; // AES_RESET
+
 	AES->CTRL1 = 0x0005501e + (dec ? 0x8000 : 0); // MODE=CCM; OUT_MIC=1; MIC_LEN=4b; OUT_MSG=1; IF_CLR=OF_CLR=1; LOCK0=1 
-	
-	
+
 	for(i = 0; i < 4; i++)
 		AES->KEY[7 - i] = ((uint32_t*)key)[i];
 	
 	AES->MSTR_LEN = encSrcLen;
 	AES->ASTR_LEN = authSrcLen;
-	
+
 	for(i = 0; i < 3; i++)
 		AES->IV[i] = ((uint32_t*)nonce)[i];
 	AES->IV[3] = ((uint8_t*)nonce)[12] + 0x200;	//2 byte lengths
-	
 	
 	AES->CTRL1 |= 1; // START
 	
