@@ -116,7 +116,8 @@ struct PendingInfo {
 	uint32_t imgUpdateSize;
 	uint64_t osUpdateVer;					//version of OS update avail
 	uint32_t osUpdateSize;
-	uint8_t rfu[8];							//shall be zero for now
+	uint32_t nextCheckinDelay;					//delay to next checkin, in msec, if zero, use value from AssocInfo
+	uint8_t rfu[4];							//shall be zero for now
 } __packed;
 
 struct ChunkReqInfo {

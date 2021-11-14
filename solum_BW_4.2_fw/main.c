@@ -17,7 +17,7 @@
 
 
 
-#define SW_VER_CURRENT				(0x0000010000000007ull)		//top 16 bits are off limits, xxxx.VV.tt.vvvv.mmmm means version V.t.v.m
+#define SW_VER_CURRENT				(0x0000010000000008ull)		//top 16 bits are off limits, xxxx.VV.tt.vvvv.mmmm means version V.t.v.m
 
 
 //unreadable to our code!
@@ -585,7 +585,7 @@ static uint32_t TEXT2 prvDriveDownload(struct Settings *settings, struct CommsIn
 	//sanity check
 	if (nPieces > sizeof(eih->piecesMissing) * 8) {
 		pr("DL too large: %u\r\n", eih->size);
-		return settings->checkinDelay;
+		return 0;
 	}
 	
 	//prepare the packet
@@ -644,7 +644,7 @@ static uint32_t TEXT2 prvDriveDownload(struct Settings *settings, struct CommsIn
 					pr("RX: %d < %d\r\n", ret, sizeof(uint8_t) + sizeof(struct AssocInfo));
 					
 					//server glitch? check in later
-					return settings->checkinDelay;
+					return 0;
 				}
 				else if (rx[0] != PKT_CHUNK_RESP) {
 					pr("RX: pkt 0x%02x @ %s\r\n", rx[0], "DL");
@@ -723,7 +723,7 @@ downloadDone:
 checkin_again:
 	if (curPiece != nPieces)
 		prvProgressBar(curPiece, nPieces, &settings->prevDlProgress);
-	return settings->checkinDelay;
+	return 0;
 
 retry_later:
 	prvProgressBar(curPiece, nPieces, &settings->prevDlProgress);
@@ -800,7 +800,7 @@ static void radioInitialize(void)
 static uint32_t uiPaired(struct Settings *settings, struct CommsInfo *ci)
 {
 	struct EepromContentsInfo eci;
-	uint32_t addr, ofst, i;
+	uint32_t addr, ofst, i, delay;
 	struct PendingInfo pi;
 
 	//do this before we turn on the radio, for power reasons
@@ -849,13 +849,23 @@ static uint32_t uiPaired(struct Settings *settings, struct CommsInfo *ci)
 		(uint32_t)(eci.latestCompleteImgVer >> 32), (uint32_t)eci.latestCompleteImgVer);
 	
 	//if there is an update, we want it
-	if ((pi.osUpdateVer & VERSION_SIGNIFICANT_MASK) > (SW_VER_CURRENT & VERSION_SIGNIFICANT_MASK))
-		return prvDriveUpdateDownload(settings, ci, pi.osUpdateVer, pi.osUpdateSize);
+	if ((pi.osUpdateVer & VERSION_SIGNIFICANT_MASK) > (SW_VER_CURRENT & VERSION_SIGNIFICANT_MASK)){
+		delay = prvDriveUpdateDownload(settings, ci, pi.osUpdateVer, pi.osUpdateSize);
+		if (delay){
+			return delay;
+		}
+	}
 	
-	if (pi.imgUpdateVer != eci.latestCompleteImgVer)
-		return prvDriveImageDownload(settings, ci, &eci, pi.imgUpdateVer, pi.imgUpdateSize);
+	if (pi.imgUpdateVer != eci.latestCompleteImgVer){
+		delay = prvDriveImageDownload(settings, ci, &eci, pi.imgUpdateVer, pi.imgUpdateSize);
+		if (delay){
+			return delay;
+		}
+	}
 	
 	//nothing? guess we'll check again later
+	if (pi.nextCheckinDelay)
+		return pi.nextCheckinDelay;
 	return settings->checkinDelay;
 }
 
