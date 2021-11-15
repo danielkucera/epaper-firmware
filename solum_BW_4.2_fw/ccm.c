@@ -8,7 +8,6 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 {
 	uint32_t tempB, nBytesNoMic = authSrcLen + encSrcLen, nBytesIn, nBytesOut;
 	const uint32_t *inD = (const uint32_t*)src;
-	uint32_t *outD = (uint32_t*)dst;
 	uint_fast8_t i;
 	bool success;
 
@@ -40,6 +39,8 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 		nBytesIn = nBytesNoMic;
 		nBytesOut = nBytesNoMic + AES_CCM_MIC_SIZE;
 	}
+
+	uint32_t outD[nBytesOut/4 + 1];
 	
 	AES->CTRL1 &=~ 128; // reset HW prio
 	AES->CTRL1 |= 64; // set MCU prio
@@ -55,27 +56,36 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 	for(uint32_t localCnt = 0; localCnt < 0x20; localCnt++); //wait
 	AES->CTRL2 &=~ 1; // AES_RESET
 
-	AES->CTRL1 = (AES->CTRL1 &~ 0x0d) | 0x02; // reset: START, IF_CLR, OF_CLR; set LOCK0
-	
+	AES->CTRL1 &=~ 1; // START
+
 	AES->IMR = 0x07; // disable all interrupt
 
-	AES->CTRL1 = 0x0005501e + (dec ? 0x8000 : 0); // MODE=CCM; OUT_MIC=1; MIC_LEN=4b; OUT_MSG=1; IF_CLR=OF_CLR=1; LOCK0=1 
+	AES->CTRL1 = 0x00055052 + (dec ? 0x8000 : 0); // MODE=CCM; OUT_MIC=1; MIC_LEN=4b; OUT_MSG=1; IF_CLR=OF_CLR=0; LOCK0=1 
 
-	for(i = 0; i < 4; i++)
-		AES->KEY[7 - i] = ((uint32_t*)key)[i];
+	AES->CTRL1 |= 4; // IF_CLR
+	for(uint32_t localCnt = 0; localCnt < 0x20; localCnt++); //wait
+	AES->CTRL1 &=~ 4; // IF_CLR
+
+	AES->CTRL1 |= 8; // OF_CLR
+	for(uint32_t localCnt = 0; localCnt < 0x20; localCnt++); //wait
+	AES->CTRL1 &=~ 8; // OF_CLR
 	
-	AES->MSTR_LEN = encSrcLen;
-	AES->ASTR_LEN = authSrcLen;
-
 	for(i = 0; i < 3; i++)
 		AES->IV[i] = ((uint32_t*)nonce)[i];
 	AES->IV[3] = ((uint8_t*)nonce)[12] + 0x200;	//2 byte lengths
 	
+	for(i = 0; i < 4; i++)
+		AES->KEY[7 - i] = ((uint32_t*)key)[i];
+	
+	AES->ASTR_LEN = authSrcLen;
+	AES->MSTR_LEN = encSrcLen;
+
 	AES->CTRL1 |= 1; // START
 	
 	uint32_t nretries;
+	uint32_t outWords = 0;
 	
-	while (nBytesIn || nBytesOut) {
+	while (nBytesIn || (outWords * 4 < nBytesOut)) {
 		
 		if (!(AES->STATUS & 0x10) && nBytesIn) { // !IF_FULL & bytes left to copy
 			
@@ -92,24 +102,15 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 			}
 		}
 		
-		if ((AES->STATUS & 0x40) && nBytesOut) { // OF_RDY & bytes left to read
+		if ((AES->STATUS & 0x40) && (outWords * 4 < nBytesOut)) { // OF_RDY & bytes left to read
 			
-			tempB = AES->STR_OUT;
+			outD[outWords++] = AES->STR_OUT;
 			//pr("o %0X \n", tempB);
-
-			if (nBytesOut >= 4) {
-				*outD++ = tempB; // copy output
-				nBytesOut -= 4; // decrease bytes left
-			}
-			else {
-				memcpy(outD, &tempB, nBytesOut);
-				nBytesOut = 0;
-			}
 			
 		}
 		
 		if (nretries++ > 1000000) {
-			pr("AES timeout. in: %d out :%d\n", nBytesIn, nBytesOut);
+			pr("AES timeout. in: %d out :%d\n", nBytesIn, outWords);
 			while(1);
 		}
 	}
@@ -123,6 +124,10 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 #endif
 
 	success = !((AES->STATUS >> 11) & 7); // STATUS 0=no error
+
+	if (success){
+		memcpy(dst, (void*)outD, nBytesOut);
+	}
 	
 	AES->CTRL1 &=~ 0x02; // reset LOCK0
 	
@@ -131,7 +136,9 @@ static bool aesCcmOp(void* dst, const void *src, uint16_t authSrcLen, uint16_t e
 
 void aesCcmEnc(void* dst, const void *src, uint16_t authSrcLen, uint16_t encSrcLen, const void *key, const void *nonce)
 {
-	aesCcmOp(dst, src, authSrcLen, encSrcLen, key, nonce, false);
+	while (!aesCcmOp(dst, src, authSrcLen, encSrcLen, key, nonce, false)){
+		pr("AES enc failed");
+	}
 }
 
 bool aesCcmDec(void* dst, const void *src, uint16_t authSrcLen, uint16_t encSrcLen, const void *key, const void *nonce)
