@@ -79,6 +79,7 @@ void settingsRead(struct Settings* settings)
 			
 			uint32_t addr = EEPROM_SETTINGS_AREA_START + page * EEPROM_PAGE_SIZE + ofst;
 			
+			memset(&sh, 0, sizeof(struct SettingsHeader));
 			qspiRead(0, addr, &sh, sizeof(struct SettingsHeader));
 			
 			//sanity checks. struct is only allowed to grow in size...
@@ -102,6 +103,7 @@ void settingsRead(struct Settings* settings)
 		settings->hdr.revision = 1;
 		mCurSettingsAddr = 0;
 	}
+	pr("Best settings at 0x%06x, revision %d\n", bestAddr, settings->hdr.revision);
 	
 	//migrate
 	switch (settings->hdr.structVersion) {
