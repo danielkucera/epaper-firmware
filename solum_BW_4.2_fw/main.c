@@ -66,7 +66,7 @@ static void prvEepromIndex(struct EepromContentsInfo *eci)
 		uint64_t *verP = NULL;
 		
 		(void)qspiRead(0, addr, eih, sizeof(struct EepromImageHeader));
-		pr("DATA slot 0x%06x: type 0x%08x ver 0x%08x%08x\r\n", addr, eih->validMarker, (uint32_t)(eih->version >> 32), (uint32_t)eih->version);
+		pr("DATA slot 0x%06x: type 0x%08x ver 0x%08x%08x size %d\r\n", addr, eih->validMarker, (uint32_t)(eih->version >> 32), (uint32_t)eih->version, eih->size);
 		
 		switch (eih->validMarker) {
 			
@@ -481,6 +481,8 @@ static void TEXT2 uiPrvDrawImageAtAddress(uint32_t addr, uint32_t size)
 	uint8_t sig[6];
 	uint8_t *data;
 	
+	wdtPet();
+	pr("Drawing image at 0x%08x size %d\r\n", addr, size);
 	bzero(displayGetFbPtr(), ((DISPLAY_WIDTH * DISPLAY_BPP + 7) / 8) * DISPLAY_HEIGHT);
 	
 	if (size < 6)	//we need enough size to even sort out what this is, that needs 6 bytes
@@ -594,6 +596,7 @@ static uint32_t TEXT2 prvDriveDownload(struct Settings *settings, struct CommsIn
 	//find where we are in downloading
 	for (curPiece = 0; curPiece < nPieces && !((eih->piecesMissing[curPiece / 8] >> (curPiece % 8)) & 1); curPiece++);
 	
+	wdtPet();
 	pr("Requesting piece %u/%u of %s\r\n", curPiece, nPieces, isOS ? "UPDATE" : "IMAGE");
 	
 	//download
@@ -774,6 +777,8 @@ static uint32_t prvDriveImageDownload(struct Settings *settings, struct CommsInf
 		if (addr >= EEPROM_IMG_START + EEPROM_IMG_LEN)
 			addr = EEPROM_IMG_START;
 	}
+
+	pr("Will download IMAGE to addr 0x%x\r\n", addr);
 	
 	//see what's there already
 	qspiRead(0, addr, eih, sizeof(struct EepromImageHeader));
@@ -834,6 +839,8 @@ static uint32_t uiPaired(struct Settings *settings, struct CommsInfo *ci)
 		//try again in due time
 		return settings->checkinDelay;
 	}
+
+	pr("checkin OK!\r\n");
 	
 	//if we got here, we succeeded with the check-in. if screen was blanked, redraw it
 	if (settings->failedCheckinsTillBlank && settings->numFailedCheckins >= settings->failedCheckinsTillBlank)
