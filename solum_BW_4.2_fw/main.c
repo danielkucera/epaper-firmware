@@ -522,8 +522,9 @@ static void TEXT2 uiPrvDrawImageAtAddress(uint32_t addr, uint32_t size)
 		uiPrvDrawRaw(data, size);
 	
 	heapFree(data);
-	
-	setPowerState(false);
+
+	//What is this supposed to do?
+	//setPowerState(false);
 	
 	if (!displayRefresh(false))
 		powerDownAndSleep(0);
