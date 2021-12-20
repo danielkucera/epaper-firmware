@@ -17,7 +17,7 @@
 
 
 
-#define SW_VER_CURRENT				(0x0000010000000008ull)		//top 16 bits are off limits, xxxx.VV.tt.vvvv.mmmm means version V.t.v.m
+#define SW_VER_CURRENT				(0x0000010000000009ull)		//top 16 bits are off limits, xxxx.VV.tt.vvvv.mmmm means version V.t.v.m
 
 
 //unreadable to our code!
